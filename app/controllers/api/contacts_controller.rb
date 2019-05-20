@@ -1,6 +1,14 @@
 class Api::ContactsController < ApplicationController
+
+  before_action :authenticate_user
+
   def index
-    @contacts = Contact.all
+    @contacts = current_user.contacts
+
+    if params[:search]
+      @contacts = @contacts.where("first_name iLIKE ? OR last_name iLIKE ? OR middle_name iLIKE ? OR email iLIKE ? OR bio iLIKE ?", "%#{params[:search]}%", "%#{params[:search]}%", "%#{params[:search]}%", "%#{params[:search]}%", "%#{params[:search]}%")
+    end
+
     render 'index.json.jbuilder'
   end
 
@@ -17,10 +25,14 @@ class Api::ContactsController < ApplicationController
      	phone_number: params[:phone_number],
       bio: params[:bio],
       latitude: coordinates[0],
-      longitude: coordinates[1]
+      longitude: coordinates[1],
+      user_id: current_user.id
     )
-    @contact.save
-    render 'show.json.jbuilder'
+    if @contact.save
+      render 'show.json.jbuilder'
+    else
+      render json: {errors: @contact.errors.full_messages}, status: :unprocessable_entity
+    end
   end
 
   def show
@@ -45,8 +57,11 @@ class Api::ContactsController < ApplicationController
     @contact.latitude = coordinates[0] || @contact.latitude
     @contact.longitude = coordinates[1] || @contact.longitude
 
-    @contact.save
-    render 'show.json.jbuilder'
+    if @contact.save
+      render 'show.json.jbuilder'
+    else
+      render json: {errors: @contact.errors.full_messages}, status: :unprocessable_entity
+    end
   end
 
   def destroy
